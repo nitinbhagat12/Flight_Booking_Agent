@@ -19,6 +19,7 @@ jobs:
           docker build -t travel-demo/search-service:ci ./services/search-service
           docker build -t travel-demo/booking-service:ci ./services/booking-service
           docker build -t travel-demo/payment-service:ci ./services/payment-service
+          docker build -t travel-demo/web:ci ./frontend
 
       - name: Run stack
         run: |
@@ -32,6 +33,7 @@ jobs:
           curl -fsS http://localhost:5001/health
           curl -fsS http://localhost:5002/health
           curl -fsS http://localhost:5003/health
+          curl -fsS -o /dev/null http://localhost:8081/
 
       - name: Logs on failure
         if: failure()

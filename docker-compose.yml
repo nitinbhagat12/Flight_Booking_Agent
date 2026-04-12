@@ -1,4 +1,14 @@
 services:
+  web:
+    build:
+      context: ./frontend
+    container_name: flight-web
+    ports:
+      - "8081:80"
+    depends_on:
+      - search-service
+      - booking-service
+
   search-service:
     build:
       context: ./services/search-service
