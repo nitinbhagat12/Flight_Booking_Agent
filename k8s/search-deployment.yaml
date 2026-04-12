@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: search-service
+  template:
+    metadata:
+      labels:
+        app: search-service
+    spec:
+      containers:
+        - name: search-service
+          image: travel-demo/search-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+
+

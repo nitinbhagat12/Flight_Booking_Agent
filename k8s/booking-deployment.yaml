@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: booking-service
+  template:
+    metadata:
+      labels:
+        app: booking-service
+    spec:
+      containers:
+        - name: booking-service
+          image: travel-demo/booking-service:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            # Inside K8s, service DNS + Service port 80 is enough.
+            - name: PAYMENT_URL
+              value: "http://payment-service"
+          ports:
+            - containerPort: 5000
+
+

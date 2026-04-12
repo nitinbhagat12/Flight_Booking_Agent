@@ -1,0 +1,28 @@
+services:
+  search-service:
+    build:
+      context: ./services/search-service
+    container_name: search-service
+    ports:
+      - "5001:5000"
+
+  payment-service:
+    build:
+      context: ./services/payment-service
+    container_name: payment-service
+    ports:
+      - "5003:5000"
+
+  booking-service:
+    build:
+      context: ./services/booking-service
+    container_name: booking-service
+    environment:
+      # Service-to-service call via compose DNS name
+      - PAYMENT_URL=http://payment-service:5000
+    depends_on:
+      - payment-service
+    ports:
+      - "5002:5000"
+
+
