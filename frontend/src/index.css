@@ -5,24 +5,24 @@
 }
 
 :root {
-  --bg-deep: #070a12;
-  --bg-card: rgba(255, 255, 255, 0.04);
-  --bg-card-hover: rgba(255, 255, 255, 0.07);
-  --border: rgba(255, 255, 255, 0.08);
-  --text: #f4f6fb;
-  --muted: #9aa3b5;
-  --accent: #3ee8ff;
-  --accent-dim: rgba(62, 232, 255, 0.15);
+  --bg-deep: #f3f7ff;
+  --bg-card: rgba(255, 255, 255, 0.9);
+  --bg-card-hover: rgba(247, 251, 255, 1);
+  --border: #dbe5f5;
+  --text: #11213f;
+  --muted: #5e7296;
+  --accent: #1f7dff;
+  --accent-dim: rgba(31, 125, 255, 0.14);
   --success: #4ade80;
   --warning: #fbbf24;
   --danger: #f87171;
   --radius: 14px;
-  --shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  --shadow: 0 16px 40px rgba(22, 72, 156, 0.14);
   font-family: "DM Sans", system-ui, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   color: var(--text);
-  background-color: var(--bg-deep);
+  background-color: #eaf1ff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
