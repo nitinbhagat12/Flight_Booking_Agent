@@ -1,44 +1,81 @@
 from __future__ import annotations
 
+import time
 from typing import Any
 
 from flask import Flask, jsonify, request, Response
 
+# Prometheus
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+
 app = Flask(__name__)
 
-METRICS = {
-    "http_requests_total": 0,
-    "payment_attempts_total": 0,
-    "payment_success_total": 0,
-    "payment_failure_total": 0,
-}
+# -------------------- METRICS --------------------
 
+# Total HTTP requests
+REQUEST_COUNT = Counter(
+    "http_requests_total",
+    "Total HTTP requests",
+    ["method", "endpoint", "status"]
+)
 
-def inc(metric_name: str) -> None:
-    METRICS[metric_name] = METRICS.get(metric_name, 0) + 1
+# Payment metrics
+PAYMENT_COUNTER = Counter(
+    "payment_status_total",
+    "Payment status count",
+    ["status"]  # success, failed
+)
 
+# Payment attempts
+PAYMENT_ATTEMPTS = Counter(
+    "payment_attempts_total",
+    "Total payment attempts"
+)
+
+# Request latency
+REQUEST_LATENCY = Histogram(
+    "http_request_duration_seconds",
+    "Request latency",
+    ["endpoint"]
+)
+
+# -------------------- MIDDLEWARE --------------------
 
 @app.before_request
-def _count_requests() -> None:
-    inc("http_requests_total")
+def before_request():
+    request.start_time = time.time()
 
+@app.after_request
+def after_request(response):
+    latency = time.time() - request.start_time
+
+    REQUEST_COUNT.labels(
+        method=request.method,
+        endpoint=request.path,
+        status=response.status_code
+    ).inc()
+
+    REQUEST_LATENCY.labels(endpoint=request.path).observe(latency)
+
+    return response
+
+# -------------------- ROUTES --------------------
 
 @app.get("/health")
-def health() -> tuple[dict[str, Any], int]:
+def health():
     return {"status": "ok", "service": "payment-service"}, 200
 
 
 @app.post("/pay")
-def pay() -> tuple[Response, int]:
+def pay():
     """
     Simulated payment:
     - amount <= 0 -> fail
-    - if payment_method.last4 ends with an odd digit -> fail (simple rule)
-    - otherwise success
-
-    This is intentionally deterministic and explainable (interview-friendly).
+    - odd last digit -> fail
     """
-    inc("payment_attempts_total")
+
+    PAYMENT_ATTEMPTS.inc()
+
     body = request.get_json(silent=True) or {}
 
     amount = body.get("amount", 0)
@@ -46,7 +83,7 @@ def pay() -> tuple[Response, int]:
     booking_id = body.get("booking_id", "")
     payment_method = body.get("payment_method") or {}
 
-    # Basic validation (keep readable).
+    # Validate amount
     try:
         amount_value = float(amount)
     except (TypeError, ValueError):
@@ -55,8 +92,10 @@ def pay() -> tuple[Response, int]:
     last4 = str(payment_method.get("last4") or "").strip()
     last_digit = last4[-1] if last4 else ""
 
+    # Rule 1: invalid amount
     if amount_value <= 0:
-        inc("payment_failure_total")
+        PAYMENT_COUNTER.labels(status="failed").inc()
+
         return jsonify(
             {
                 "status": "failed",
@@ -67,8 +106,10 @@ def pay() -> tuple[Response, int]:
             }
         ), 400
 
+    # Rule 2: odd digit fails
     if last_digit.isdigit() and (int(last_digit) % 2 == 1):
-        inc("payment_failure_total")
+        PAYMENT_COUNTER.labels(status="failed").inc()
+
         return jsonify(
             {
                 "status": "failed",
@@ -79,7 +120,9 @@ def pay() -> tuple[Response, int]:
             }
         ), 402
 
-    inc("payment_success_total")
+    # Success
+    PAYMENT_COUNTER.labels(status="success").inc()
+
     return jsonify(
         {
             "status": "success",
@@ -92,25 +135,11 @@ def pay() -> tuple[Response, int]:
 
 
 @app.get("/metrics")
-def metrics() -> Response:
-    lines = [
-        "# HELP http_requests_total Total HTTP requests received",
-        "# TYPE http_requests_total counter",
-        f"http_requests_total {METRICS.get('http_requests_total', 0)}",
-        "# HELP payment_attempts_total Total payment attempts",
-        "# TYPE payment_attempts_total counter",
-        f"payment_attempts_total {METRICS.get('payment_attempts_total', 0)}",
-        "# HELP payment_success_total Total successful payments",
-        "# TYPE payment_success_total counter",
-        f"payment_success_total {METRICS.get('payment_success_total', 0)}",
-        "# HELP payment_failure_total Total failed payments",
-        "# TYPE payment_failure_total counter",
-        f"payment_failure_total {METRICS.get('payment_failure_total', 0)}",
-    ]
-    return Response("\n".join(lines) + "\n", mimetype="text/plain; version=0.0.4")
+def metrics():
+    return Response(generate_latest(), mimetype=CONTENT_TYPE_LATEST)
 
+
+# -------------------- MAIN --------------------
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
-
-
